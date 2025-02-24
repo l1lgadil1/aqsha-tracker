@@ -9,10 +9,28 @@ import { TransactionList } from '../../../shared/ui/transaction-list/transaction
 import { useAnalyticsModel } from '../model/analytics.model';
 import { Text } from '../../../shared/ui/text';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTransactions, useAccounts } from '../../../shared/hooks/use-app-data';
+import { useFocusEffect } from '@react-navigation/native';
 
 export const AnalyticsScreen: React.FC = () => {
   const { colors } = useTheme();
   const { state, handlers, calculateAnalytics } = useAnalyticsModel();
+  const { fetchTransactions } = useTransactions();
+  const { fetchAccounts } = useAccounts();
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      const refreshData = async () => {
+        await Promise.all([
+          fetchTransactions(),
+          fetchAccounts()
+        ]);
+        calculateAnalytics();
+      };
+      refreshData();
+    }, [fetchTransactions, fetchAccounts, calculateAnalytics])
+  );
 
   useEffect(() => {
     calculateAnalytics();

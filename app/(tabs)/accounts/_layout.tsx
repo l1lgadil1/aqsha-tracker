@@ -15,7 +15,6 @@ export default function AccountsLayout() {
           fontWeight: '600',
         },
         headerShadowVisible: false,
-        headerBackTitleVisible: false,
       }}
     >
       <Stack.Screen

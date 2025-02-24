@@ -11,12 +11,11 @@ interface TransactionsState {
   
   // Actions
   fetchTransactions: () => Promise<void>;
-  createTransaction: (state: TransactionState & { note?: string }) => Promise<void>;
-  getTransactionsByAccount: (accountId: string) => Promise<void>;
-  getTransactionsByCategory: (categoryId: string) => Promise<void>;
+  createTransaction: (state: TransactionState & { note?: string }) => Promise<TypeTransaction>;
+  getTransactionsByAccount: (accountId: string) => Promise<TypeTransaction[]>;
+  getTransactionsByCategory: (categoryId: string) => Promise<TypeTransaction[]>;
+  resetTransactions: () => Promise<void>;
 }
-
-type TransactionsStore = StateCreator<TransactionsState>;
 
 // Helper function to convert service transaction to type transaction
 const convertServiceTransaction = (transaction: ServiceTransaction): TypeTransaction => {
@@ -40,19 +39,31 @@ export const useTransactionsStore = create<TransactionsState>((set, get): Transa
       set({ transactions, isLoading: false });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
   createTransaction: async (state: TransactionState & { note?: string }) => {
     try {
       set({ isLoading: true, error: null });
-      await transactionsService.createTransaction(state);
       
-      // Refresh both transactions and accounts since balances are affected
-      await get().fetchTransactions();
-      await useAccountsStore.getState().fetchAccounts();
+      // Create the transaction
+      const newTransaction = await transactionsService.createTransaction(state);
+      const convertedTransaction = convertServiceTransaction(newTransaction);
+      
+      // Update transactions store
+      const currentTransactions = get().transactions;
+      const updatedTransactions = [...currentTransactions, convertedTransaction];
+      set({ transactions: updatedTransactions, isLoading: false });
+      
+      // Update accounts store
+      const accountsStore = useAccountsStore.getState();
+      await accountsStore.fetchAccounts();
+      
+      return convertedTransaction;
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -62,8 +73,10 @@ export const useTransactionsStore = create<TransactionsState>((set, get): Transa
       const serviceTransactions = await transactionsService.getTransactionsByAccount(accountId);
       const transactions = serviceTransactions.map(convertServiceTransaction);
       set({ transactions, isLoading: false });
+      return transactions;
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -73,8 +86,21 @@ export const useTransactionsStore = create<TransactionsState>((set, get): Transa
       const serviceTransactions = await transactionsService.getTransactionsByCategory(categoryId);
       const transactions = serviceTransactions.map(convertServiceTransaction);
       set({ transactions, isLoading: false });
+      return transactions;
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
+    }
+  },
+
+  resetTransactions: async () => {
+    try {
+      set({ isLoading: true, error: null });
+      await transactionsService.resetTransactions();
+      set({ transactions: [], isLoading: false });
+    } catch (error) {
+      set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 })); 

@@ -5,6 +5,7 @@ import { Fragment } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet, View } from 'react-native';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { useAppData } from '@/src/shared/hooks/use-app-data';
 
 export default function RootLayout() {
   return (
@@ -22,7 +23,7 @@ export default function RootLayout() {
 
 function RootLayoutContent() {
   const { colors, isDarkMode } = useTheme();
-
+  useAppData();
   return (
     <Fragment>
       <Stack

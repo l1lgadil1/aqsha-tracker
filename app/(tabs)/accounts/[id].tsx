@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, Pressable } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useTheme } from '../../../src/shared/contexts/theme-context';
-import { accountsService } from '../../../src/shared/services/accounts';
-import { transactionsService, Transaction } from '../../../src/shared/services/transactions';
+import { Transaction } from '../../../src/shared/types/transaction';
 import { Account } from '../../../src/shared/types/account';
 import { formatAmount } from '../../../src/shared/utils/format';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { Text } from '../../../src/shared/ui/text';
+import { useAccounts } from '../../../src/shared/hooks/use-accounts';
+import { TransactionList } from '../../../src/shared/ui/transactions/transaction-list';
+import { AccountsSkeleton } from '../../../src/shared/ui/accounts-skeleton';
 
 export default function AccountDetailsScreen() {
   const { id } = useLocalSearchParams();
@@ -16,60 +19,70 @@ export default function AccountDetailsScreen() {
   const [account, setAccount] = useState<Account | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { getAccountWithTransactions, deleteAccount } = useAccounts();
 
   useEffect(() => {
     fetchAccountDetails();
   }, [id]);
 
   const fetchAccountDetails = async () => {
-    try {
-      const accountData = await accountsService.getAccountById(id as string);
-      if (!accountData) {
-        Alert.alert('Ошибка', 'Счет не найден');
-        router.back();
-        return;
-      }
-      setAccount(accountData);
+    if (!id || typeof id !== 'string') {
+      setError('Invalid account ID');
+      return;
+    }
 
-      const allTransactions = await transactionsService.getTransactions();
-      const accountTransactions = allTransactions.filter(
-        t => t.sourceAccount?.id === id || t.destinationAccount?.id === id
-      );
-      setTransactions(accountTransactions);
+    try {
+      setIsLoading(true);
+      setError(null);
+      const result = await getAccountWithTransactions(id);
+      setAccount(result.account);
+      setTransactions(result.transactions as Transaction[]);
     } catch (error) {
       console.error('Error fetching account details:', error);
-      Alert.alert('Ошибка', 'Не удалось загрузить данные счета');
+      setError('Failed to load account details');
+      if ((error as Error).message === 'Account not found') {
+        router.back();
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleEditPress = () => {
-    // Navigate to edit screen
+    if (!account) return;
     router.push({
-      pathname: '/accounts/edit',
-      params: { id: account?.id }
+      pathname: '/(tabs)/accounts/edit',
+      params: { id: account.id }
     });
   };
 
   const handleDeletePress = async () => {
     if (!account) return;
 
+    if (account.isDefault) {
+      Alert.alert(
+        'Cannot Delete Default Account',
+        'This is a default account and cannot be deleted. You can archive it instead if you don\'t want to use it.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     Alert.alert(
-      'Удаление счета',
-      'Вы уверены, что хотите удалить этот счет?',
+      'Delete Account',
+      'Are you sure you want to delete this account? This action cannot be undone.',
       [
-        { text: 'Отмена', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Удалить',
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
-              await accountsService.deleteAccount(account.id);
+              await deleteAccount(account.id);
               router.back();
             } catch (error) {
-              console.error('Error deleting account:', error);
-              Alert.alert('Ошибка', 'Не удалось удалить счет');
+              Alert.alert('Error', 'Failed to delete account');
             }
           },
         },
@@ -118,29 +131,6 @@ export default function AccountDetailsScreen() {
       color: colors.textPrimary,
       marginBottom: 16,
     },
-    transactionItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    transactionInfo: {
-      flex: 1,
-    },
-    transactionType: {
-      fontSize: 16,
-      color: colors.textPrimary,
-      marginBottom: 4,
-    },
-    transactionDate: {
-      fontSize: 14,
-      color: colors.textSecondary,
-    },
-    transactionAmount: {
-      fontSize: 16,
-      fontWeight: '600',
-    },
     actionButton: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -153,10 +143,46 @@ export default function AccountDetailsScreen() {
       fontSize: 14,
       fontWeight: '500',
     },
+    errorContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 32,
+    },
+    errorText: {
+      textAlign: 'center',
+      color: colors.error,
+      marginBottom: 16,
+    },
+    defaultAccountBadge: {
+      backgroundColor: colors.primary + '20',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 4,
+      marginTop: 4,
+    },
+    defaultAccountText: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '500',
+    },
   });
 
-  if (!account) {
-    return null;
+  if (isLoading) {
+    return <AccountsSkeleton />;
+  }
+
+  if (error || !account) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error || 'Account not found'}</Text>
+          <Pressable onPress={fetchAccountDetails} style={styles.actionButton}>
+            <Text style={styles.actionButtonText}>Try Again</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
   }
 
   return (
@@ -172,18 +198,20 @@ export default function AccountDetailsScreen() {
               >
                 <Ionicons name="pencil" size={20} color={colors.primary} />
                 <Text style={[styles.actionButtonText, { color: colors.primary }]}>
-                  Изменить
+                  Edit
                 </Text>
               </Pressable>
-              <Pressable
-                onPress={handleDeletePress}
-                style={[styles.actionButton, { backgroundColor: colors.error + '20' }]}
-              >
-                <Ionicons name="trash" size={20} color={colors.error} />
-                <Text style={[styles.actionButtonText, { color: colors.error }]}>
-                  Удалить
-                </Text>
-              </Pressable>
+              {!account.isDefault && (
+                <Pressable
+                  onPress={handleDeletePress}
+                  style={[styles.actionButton, { backgroundColor: colors.error + '20' }]}
+                >
+                  <Ionicons name="trash" size={20} color={colors.error} />
+                  <Text style={[styles.actionButtonText, { color: colors.error }]}>
+                    Delete
+                  </Text>
+                </Pressable>
+              )}
             </View>
           ),
         }}
@@ -195,45 +223,26 @@ export default function AccountDetailsScreen() {
           style={styles.header}
         >
           <Text style={styles.accountName}>{account.name}</Text>
+          {account.isDefault && (
+            <View style={styles.defaultAccountBadge}>
+              <Text style={styles.defaultAccountText}>Default Account</Text>
+            </View>
+          )}
           <View style={styles.balanceContainer}>
             <Text style={styles.balance}>
               {formatAmount(account.balance)}
             </Text>
-            <Text style={styles.currency}>{account.currency}</Text>
+            <Text style={styles.currency}>{account.currency || '₸'}</Text>
           </View>
         </Animated.View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>История операций</Text>
-          {transactions.map((transaction) => (
-            <View key={transaction.id} style={styles.transactionItem}>
-              <View style={styles.transactionInfo}>
-                <Text style={styles.transactionType}>
-                  {transaction.type === 'expense' ? 'Расход' : 
-                   transaction.type === 'income' ? 'Доход' : 'Перевод'}
-                </Text>
-                <Text style={styles.transactionDate}>
-                  {transaction.date.toLocaleDateString()}
-                </Text>
-              </View>
-              <Text
-                style={[
-                  styles.transactionAmount,
-                  {
-                    color:
-                      transaction.type === 'expense'
-                        ? colors.expense
-                        : transaction.type === 'income'
-                        ? colors.income
-                        : colors.textPrimary,
-                  },
-                ]}
-              >
-                {transaction.type === 'expense' ? '-' : '+'}
-                {formatAmount(transaction.amount)} {account.currency}
-              </Text>
-            </View>
-          ))}
+          <Text style={styles.sectionTitle}>Transaction History</Text>
+          <TransactionList
+            transactions={transactions}
+            accountId={account.id}
+            currency={account.currency}
+          />
         </View>
       </ScrollView>
     </>

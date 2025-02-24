@@ -5,6 +5,7 @@ import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { transactionsService } from '../../../shared/services/transactions';
 import { accountsService } from '../../../shared/services/accounts';
 import { Alert } from 'react-native';
+import { useAccounts, useTransactions } from '@/src/shared/hooks/use-app-data';
 
 const MAX_DECIMAL_PLACES = 2;
 const MAX_DIGITS = 10;
@@ -29,6 +30,8 @@ const toAccount = (account: TransactionAccount): Account => ({
 });
 
 export const useTransactionModel = () => {
+    const { createTransaction } = useTransactions();
+  const { fetchAccounts } = useAccounts();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [state, setState] = useState<TransactionState>({
     type: 'expense',
@@ -261,6 +264,8 @@ export const useTransactionModel = () => {
           );
         });
     }
+    fetchAccounts();  
+    createTransaction(state);
   }, [state, resetState]);
 
   const handleSourceAccountPress = useCallback(() => {

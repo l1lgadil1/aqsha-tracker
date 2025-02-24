@@ -11,6 +11,7 @@ import { TransactionState, TransactionType, Category } from '../../../shared/typ
 import { Account } from '../../../shared/types/account';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useTransactions, useAccounts } from '../../../shared/hooks/use-app-data';
 
 interface TransactionScreenProps {
   state: TransactionState;
@@ -27,6 +28,7 @@ interface TransactionScreenProps {
   onCategorySelect: (category: Category) => void;
   onDeletePress: () => void;
   onClearAmount: () => void;
+  onTransactionComplete?: () => void;
 }
 
 export const TransactionScreen: React.FC<TransactionScreenProps> = ({
@@ -44,8 +46,22 @@ export const TransactionScreen: React.FC<TransactionScreenProps> = ({
   onCategorySelect,
   onDeletePress,
   onClearAmount,
+  onTransactionComplete,
 }) => {
   const { colors } = useTheme();
+
+
+  const handleConfirmPress = async () => {
+    try {
+      onConfirmPress();
+      // await createTransaction(state);
+      // await fetchAccounts(); // Ensure accounts are updated
+      onTransactionComplete?.(); // Call completion handler if provided
+    } catch (error) {
+      // Handle error appropriately
+      console.error('Failed to create transaction:', error);
+    }
+  };
 
   const styles = StyleSheet.create({
     safeArea: {
@@ -133,7 +149,7 @@ export const TransactionScreen: React.FC<TransactionScreenProps> = ({
                 onNumberPress={onNumberPress}
                 onDecimalPress={onDecimalPress}
                 onDividePress={onDividePress}
-                onConfirmPress={onConfirmPress}
+                onConfirmPress={handleConfirmPress}
                 onDeletePress={onDeletePress}
                 onClearAmount={onClearAmount}
               />

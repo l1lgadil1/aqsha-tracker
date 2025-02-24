@@ -1,33 +1,34 @@
-import { Account as AccountType } from './account';
-import { IncomeSource } from '../ui/account-selector';
+export interface TransactionAccount {
+  id: string;
+  name: string;
+  balance: number;
+  type: string;
+  currency?: string;
+}
 
-export type TransactionType = 'expense' | 'income' | 'transfer';
+export interface IncomeSource {
+  id: string;
+  name: string;
+  type: string;
+}
+
+export type TransactionType = 'income' | 'expense' | 'transfer';
 
 export interface Category {
   id: string;
   name: string;
-  color: string;
-  icon: string;
-  backgroundColor?: string;
-  type: TransactionType;
-}
-
-export interface TransactionAccount {
-  id: string;
-  name: string;
-  type: 'cash' | 'card' | 'deposit';
-  balance: number;
+  type: string;
 }
 
 export interface Transaction {
   id: string;
   type: TransactionType;
   amount: number;
+  date: string | Date;
+  description?: string;
   category: Category | null;
-  sourceAccount: TransactionAccount | null;
+  sourceAccount: TransactionAccount | IncomeSource | null;
   destinationAccount: TransactionAccount | null;
-  date: Date;
-  note?: string;
 }
 
 export interface TransactionState {

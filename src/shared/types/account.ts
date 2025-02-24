@@ -9,6 +9,7 @@ export interface Account {
   color?: string;
   icon?: string;
   isArchived?: boolean;
+  isDefault?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
