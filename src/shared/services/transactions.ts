@@ -1,14 +1,15 @@
-import { TransactionState } from '../types/transaction';
+import { ITransaction } from '../types/transaction';
 import { storageService } from './storage';
 import { accountsService } from './accounts';
 
 export interface Transaction {
   id: string;
-  type: TransactionState['type'];
+  type: ITransaction['type'];
   amount: number;
-  category: TransactionState['category'];
-  sourceAccount: TransactionState['sourceAccount'];
-  destinationAccount: TransactionState['destinationAccount'];
+  category: ITransaction['category'];
+  sourceAccount: ITransaction['sourceAccount'];
+  destinationAccount: ITransaction['destinationAccount'];
+  incomeSource: ITransaction['incomeSource'];
   date: Date;
   note?: string;
 }
@@ -31,7 +32,7 @@ class TransactionsService {
       if (storedTransactions) {
         this.transactions = (storedTransactions as unknown as StoredTransaction[]).map(t => ({
           ...t,
-          date: new Date(t.date)
+          date: new Date(t.date),
         }));
       } else {
         this.transactions = [];
@@ -46,7 +47,7 @@ class TransactionsService {
   private async saveTransactions(): Promise<void> {
     const storedTransactions: StoredTransaction[] = this.transactions.map(t => ({
       ...t,
-      date: t.date.toISOString()
+      date: t.date.toISOString(),
     }));
     await storageService.setTransactions(storedTransactions as unknown as Transaction[]);
   }
@@ -58,7 +59,7 @@ class TransactionsService {
     return TransactionsService.instance;
   }
 
-  public async createTransaction(state: TransactionState & { note?: string }): Promise<Transaction> {
+  public async createTransaction(state: ITransaction & { note?: string }): Promise<Transaction> {
     if (!state.amount.value) {
       throw new Error('Amount is required');
     }
@@ -114,28 +115,33 @@ class TransactionsService {
       category: state.category,
       sourceAccount,
       destinationAccount,
+      incomeSource: state.incomeSource,
       date: new Date(),
-      note: state.note
+      note: state.note,
     };
 
     // Update account balances with fresh data
     if (transaction.type === 'expense' && sourceAccount && 'balance' in sourceAccount) {
       await accountsService.updateAccount(sourceAccount.id, {
-        balance: sourceAccount.balance - amount
+        balance: sourceAccount.balance - amount,
       });
-    } else if (transaction.type === 'income' && destinationAccount && 'balance' in destinationAccount) {
+    } else if (
+      transaction.type === 'income' &&
+      destinationAccount &&
+      'balance' in destinationAccount
+    ) {
       await accountsService.updateAccount(destinationAccount.id, {
-        balance: destinationAccount.balance + amount
+        balance: destinationAccount.balance + amount,
       });
     } else if (transaction.type === 'transfer') {
       if (sourceAccount && 'balance' in sourceAccount) {
         await accountsService.updateAccount(sourceAccount.id, {
-          balance: sourceAccount.balance - amount
+          balance: sourceAccount.balance - amount,
         });
       }
       if (destinationAccount && 'balance' in destinationAccount) {
         await accountsService.updateAccount(destinationAccount.id, {
-          balance: destinationAccount.balance + amount
+          balance: destinationAccount.balance + amount,
         });
       }
     }
@@ -150,20 +156,19 @@ class TransactionsService {
   public async getTransactions(): Promise<Transaction[]> {
     const storedTransactions = await storageService.getTransactions();
     if (!storedTransactions) return [];
-    
+
     this.transactions = (storedTransactions as unknown as StoredTransaction[]).map(t => ({
       ...t,
-      date: new Date(t.date)
+      date: new Date(t.date),
     }));
-    
+
     return this.transactions;
   }
 
   public async getTransactionsByAccount(accountId: string): Promise<Transaction[]> {
     const transactions = await this.getTransactions();
-    return transactions.filter(t => 
-      (t.sourceAccount?.id === accountId) || 
-      (t.destinationAccount?.id === accountId)
+    return transactions.filter(
+      t => t.sourceAccount?.id === accountId || t.destinationAccount?.id === accountId,
     );
   }
 
@@ -179,4 +184,4 @@ class TransactionsService {
   }
 }
 
-export const transactionsService = TransactionsService.getInstance(); 
+export const transactionsService = TransactionsService.getInstance();

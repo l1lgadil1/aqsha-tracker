@@ -1,6 +1,9 @@
 import { useEffect } from 'react';
 import { useTransactionsStore } from '../store/transactions-store';
 import { useAccountsStore } from '../store/accounts-store';
+import { TransactionType, ITransaction, Category } from '../types/transaction';
+import { Account } from '../types/account';
+import { IncomeSource } from '../types/income-source';
 
 export const useAppData = () => {
   const { fetchTransactions } = useTransactionsStore();
@@ -9,10 +12,7 @@ export const useAppData = () => {
   useEffect(() => {
     // Initial data load
     const loadInitialData = async () => {
-      await Promise.all([
-        fetchAccounts(),
-        fetchTransactions(),
-      ]);
+      await Promise.all([fetchAccounts(), fetchTransactions()]);
     };
 
     loadInitialData();
@@ -29,6 +29,59 @@ export const useTransactions = () => {
   const getTransactionsByCategory = useTransactionsStore(state => state.getTransactionsByCategory);
   const fetchTransactions = useTransactionsStore(state => state.fetchTransactions);
 
+  const handleTransactionFlow = async (
+    type: TransactionType,
+    amount: { value: string; hasDecimal: boolean },
+    sourceAccount: Account | null,
+    destinationAccount: Account | null,
+    category: Category | null,
+    incomeSource: IncomeSource | null,
+  ) => {
+    try {
+      if (!amount.value || parseFloat(amount.value) === 0) {
+        throw new Error('Please enter a valid amount');
+      }
+
+      const transaction: ITransaction = {
+        id: Date.now().toString(), // You might want to use a proper UUID here
+        type,
+        amount,
+        date: new Date(),
+        sourceAccount,
+        destinationAccount,
+        category,
+        incomeSource,
+      };
+
+      switch (type) {
+        case 'expense':
+          if (!sourceAccount) throw new Error('Please select source account');
+          if (!category) throw new Error('Please select expense category');
+          break;
+
+        case 'income':
+          if (!destinationAccount) throw new Error('Please select destination account');
+          if (!incomeSource) throw new Error('Please select income source');
+          break;
+
+        case 'transfer':
+          if (!sourceAccount) throw new Error('Please select source account');
+          if (!destinationAccount) throw new Error('Please select destination account');
+          if (sourceAccount.id === destinationAccount.id) {
+            throw new Error('Source and destination accounts must be different');
+          }
+          break;
+
+        default:
+          throw new Error('Invalid transaction type');
+      }
+
+      return await createTransaction(transaction);
+    } catch (error) {
+      throw error instanceof Error ? error : new Error('Failed to create transaction');
+    }
+  };
+
   return {
     transactions,
     isLoading,
@@ -37,6 +90,7 @@ export const useTransactions = () => {
     getTransactionsByAccount,
     getTransactionsByCategory,
     fetchTransactions,
+    handleTransactionFlow,
   };
 };
 
@@ -63,4 +117,4 @@ export const useAccounts = () => {
     archiveAccount,
     fetchAccounts,
   };
-}; 
+};

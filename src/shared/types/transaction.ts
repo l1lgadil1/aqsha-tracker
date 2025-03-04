@@ -1,3 +1,5 @@
+import { Account } from './account';
+
 export interface TransactionAccount {
   id: string;
   name: string;
@@ -5,39 +7,35 @@ export interface TransactionAccount {
   type: string;
   currency?: string;
 }
-
-export interface IncomeSource {
+export interface ICurrency {
   id: string;
   name: string;
-  type: string;
+  symbol: string;
+  code?: string;
 }
 
 export type TransactionType = 'income' | 'expense' | 'transfer';
 
 export interface Category {
+  icon?: string;
   id: string;
+  backgroundColor?: string;
+  color?: string;
   name: string;
   type: string;
 }
 
-export interface Transaction {
+export interface ITransaction {
   id: string;
-  type: TransactionType;
-  amount: number;
-  date: string | Date;
-  description?: string;
-  category: Category | null;
-  sourceAccount: TransactionAccount | IncomeSource | null;
-  destinationAccount: TransactionAccount | null;
-}
-
-export interface TransactionState {
   type: TransactionType;
   amount: {
     value: string;
     hasDecimal: boolean;
   };
+  date: string | Date;
+  description?: string;
   category: Category | null;
-  sourceAccount: TransactionAccount | IncomeSource | null;
-  destinationAccount: TransactionAccount | null;
-} 
+  incomeSource: IncomeSource | null;
+  sourceAccount: Account | null;
+  destinationAccount: Account | null;
+}

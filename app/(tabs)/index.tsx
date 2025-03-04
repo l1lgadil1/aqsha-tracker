@@ -1,8 +1,6 @@
-import { Transaction } from "@/src/screens/transaction";
-import React from "react";
+import { TransactionScreen } from '@/src/screens/transaction';
+import React from 'react';
 
 export default function Index() {
-  return (
-    <Transaction />
-  );
+  return <TransactionScreen />;
 }

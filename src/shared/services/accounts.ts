@@ -1,3 +1,4 @@
+import { AccountSchema } from '@/src/entities/accounts/model';
 import { Account, AccountFormData } from '../types/account';
 import { storageService } from './storage';
 
@@ -36,16 +37,16 @@ class AccountsService {
 
   private async initialize() {
     if (this.initialized) return;
-    
+
     const storedAccounts = await storageService.getAccounts();
-    
+
     if (!storedAccounts || storedAccounts.length === 0) {
       // Create default accounts if no accounts exist
       this.accounts = await this.createDefaultAccounts();
     } else {
       this.accounts = storedAccounts;
     }
-    
+
     this.initialized = true;
   }
 
@@ -66,7 +67,7 @@ class AccountsService {
     await storageService.setAccounts(this.accounts);
   }
 
-  public async getAccounts(): Promise<Account[]> {
+  public async getAccounts(): Promise<AccountSchema[]> {
     await this.initialize();
     return this.accounts;
   }
@@ -78,7 +79,7 @@ class AccountsService {
 
   public async createAccount(data: AccountFormData): Promise<Account> {
     await this.initialize();
-    
+
     const newAccount: Account = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       ...data,
@@ -95,7 +96,7 @@ class AccountsService {
 
   public async updateAccount(id: string, data: Partial<AccountFormData>): Promise<Account | null> {
     await this.initialize();
-    
+
     const index = this.accounts.findIndex(acc => acc.id === id);
     if (index === -1) return null;
 
@@ -112,7 +113,7 @@ class AccountsService {
 
   public async deleteAccount(id: string): Promise<boolean> {
     await this.initialize();
-    
+
     const index = this.accounts.findIndex(acc => acc.id === id);
     if (index === -1) return false;
 
@@ -137,4 +138,4 @@ class AccountsService {
   }
 }
 
-export const accountsService = AccountsService.getInstance(); 
+export const accountsService = AccountsService.getInstance();
