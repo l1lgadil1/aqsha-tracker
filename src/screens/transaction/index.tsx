@@ -1,5 +1,11 @@
-import { TransactionWidget } from '@/src/widgets/transactions';
+import { View, Text, SafeAreaView } from 'react-native';
 
 export const TransactionScreen = () => {
-  return <TransactionWidget />;
+  return (
+    <SafeAreaView>
+      <View>
+        <Text>Transaction screen</Text>
+      </View>
+    </SafeAreaView>
+  );
 };

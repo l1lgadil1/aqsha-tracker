@@ -1,9 +1,9 @@
-import { Tabs } from "expo-router";
+import { Tabs } from 'expo-router';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Entypo from '@expo/vector-icons/Entypo';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useTheme } from '../../src/shared/contexts/theme-context';
+import { useTheme } from '../../src/shared/ui/theme';
 
 export default function TabsLayout() {
   const { colors } = useTheme();
@@ -21,23 +21,20 @@ export default function TabsLayout() {
         tabBarLabelStyle: {
           fontSize: 12,
         },
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Добавить',
-          tabBarIcon: ({ color }) => (
-            <AntDesign name="pluscircle" size={24} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <AntDesign name="pluscircle" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="accounts"
         options={{
           title: 'Счета',
-          tabBarIcon: ({ color }) => (
-            <Entypo name="wallet" size={24} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <Entypo name="wallet" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -49,15 +46,13 @@ export default function TabsLayout() {
           ),
         }}
       />
-      {/* <Tabs.Screen
-        name="options"
+      <Tabs.Screen
+        name="settings"
         options={{
           title: 'Настройки',
-          tabBarIcon: ({ color }) => (
-            <FontAwesome name="gear" size={24} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <FontAwesome name="gear" size={24} color={color} />,
         }}
-      /> */}
+      />
     </Tabs>
   );
 }
